@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Xml;
@@ -6,22 +7,29 @@ using Serilog;
 
 public class ClientHandler
 {
-    private TcpClient client;
-    private NetworkStream stream;
-    private bool isAlive;
+    private TcpClient _client;
+    private NetworkStream _stream;
+    private bool _isAlive;
+    private Server _server;
 
-    public ClientHandler(TcpClient client)
+    public Server Server => _server;
+
+    public ClientHandler(TcpClient client, Server server)
     {
-        this.client = client;
-        this.stream = client.GetStream();
-        this.isAlive = true;
+        this._client = client;
+        this._stream = client.GetStream();
+        this._isAlive = true;
+        this._server = server;
     }
 
+    /// <summary>
+    /// Handles incoming messages from the client, processes them based on their format, and responds accordingly.
+    /// </summary>
     public void Handle()
     {
         try
         {
-            while (isAlive)
+            while (_isAlive)
             {
                 string requestData = ReadMessage();
 
@@ -60,7 +68,7 @@ public class ClientHandler
 
     private string ReadMessage()
     {
-        return NetworkStreamReader.ReadNullTerminatedString(stream);
+        return NetworkStreamReader.ReadNullTerminatedString(_stream);
     }
 
     /// <summary>
@@ -70,8 +78,8 @@ public class ClientHandler
     {
         string responseData = "<cross-domain-policy><allow-access-from domain=\"*\" to-ports=\"9999\" /></cross-domain-policy>";
         byte[] responseBytes = Encoding.UTF8.GetBytes(responseData);
-        stream.Write(responseBytes, 0, responseBytes.Length);
-        stream.Flush();
+        _stream.Write(responseBytes, 0, responseBytes.Length);
+        _stream.Flush();
         Log.Verbose("Sent cross-domain-policy response");
     }
 
@@ -86,7 +94,7 @@ public class ClientHandler
         if (message.StartsWith("<policy-file-request/>"))
         {
             SendPolicyFileResponse();
-            isAlive = false; // Close the connection after sending the Policy File
+            _isAlive = false; // Close the connection after sending the Policy File
             return;
         }
 
@@ -112,6 +120,10 @@ public class ClientHandler
                 new RandomKeyHandler().HandleMessage(message, this);
                 return;
 
+            case "login":
+                new LoginHandler().HandleMessage(message, this);
+                return;
+
             default:
                 Log.Error("Unhandled XML message of type {actionAttribute}: {message}", actionAttribute, message);
                 return;
@@ -120,15 +132,15 @@ public class ClientHandler
 
     private void CloseConnection()
     {
-        stream.Close();
-        client.Close();
-        isAlive = false;
+        _stream.Close();
+        _client.Close();
+        _isAlive = false;
         Log.Verbose("Connection closed");
     }
 
     public void Disconnect()
     {
-        isAlive = false;
+        _isAlive = false;
         // We let the handle loop automatically close the connection
     }
 
@@ -139,7 +151,36 @@ public class ClientHandler
         Log.Verbose("Sending data: {messageToSend}", messageToSend[..^1]);
 
         byte[] responseBytes = Encoding.UTF8.GetBytes(messageToSend);
-        stream.Write(responseBytes, 0, responseBytes.Length);
-        stream.Flush();
+        _stream.Write(responseBytes, 0, responseBytes.Length);
+        _stream.Flush();
+    }
+
+    public void SendXT(XTGroup group, params string[] args)
+    {
+        var groupId = group.ToIdString();
+        var argString = string.Join("%", args);
+        string internalId = "-1"; // No clue what this is, but houdini says it's always -1
+
+        string messageToSend = string.Format("%xt%{0}%{1}%{2}%\0", groupId, internalId, argString);
+
+        Log.Verbose("Sending data: {messageToSend}", messageToSend[..^1]);
+
+        byte[] responseBytes = Encoding.UTF8.GetBytes(messageToSend);
+        _stream.Write(responseBytes, 0, responseBytes.Length);
+        _stream.Flush();
+    }
+
+    public void SendErrorAndDisconnect(Error error, params string[] args)
+    {
+        SendErrorAndDisconnect((int)error, args);
+    }
+
+    public void SendErrorAndDisconnect(int error, params string[] args)
+    {
+        string[] newArgs = new string[args.Length + 1];
+        newArgs[0] = error.ToString();
+        Array.Copy(args, 0, newArgs, 1, args.Length);
+        SendXT(XTGroup.Error, newArgs);
+        Disconnect();
     }
 }

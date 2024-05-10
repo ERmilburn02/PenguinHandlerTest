@@ -8,4 +8,5 @@ An experiment at creating a [CPPS](https://clubpenguin.fandom.com/wiki/CPPS) usi
 - XML Messages
   - Version Check
   - Random Key
+  - Login
 - XT Messages

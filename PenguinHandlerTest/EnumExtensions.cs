@@ -9,7 +9,7 @@ public static class EnumExtensions
             ServerToClientXTPackets.Error => "e",
             ServerToClientXTPackets.Login => "l",
             ServerToClientXTPackets.DigCooldown => "getdigcooldown",
-            _ => throw new Exception("Unknown group")
+            _ => throw new Exception("Unknown packet")
         };
     }
 }

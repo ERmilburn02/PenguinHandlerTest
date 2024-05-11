@@ -14,7 +14,7 @@ public static class Redis
             throw new InvalidOperationException("Redis is already initialized");
         }
 
-        _connectionMultiplexer = ConnectionMultiplexer.Connect("localhost:56471");
+        _connectionMultiplexer = ConnectionMultiplexer.Connect("localhost:6379");
     }
 
     public static IDatabase GetDatabase()

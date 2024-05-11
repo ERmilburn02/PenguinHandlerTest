@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Xml;
+using PenguinHandlerTest;
 using Serilog;
 
 public class ClientHandler
@@ -11,8 +12,10 @@ public class ClientHandler
     private NetworkStream _stream;
     private bool _isAlive;
     private Server _server;
+    private Penguin _penguin;
 
     public Server Server => _server;
+    public Penguin Penguin => _penguin;
 
     public ClientHandler(TcpClient client, Server server)
     {
@@ -86,7 +89,27 @@ public class ClientHandler
     private void HandleXtMessage(string message)
     {
         // Handle %xt% data
-        Log.Error("Unhandled XT message: {message}", message);
+
+        // XT Packets are in the format "%xt%s%{group}#{action}%{data}%"
+        // We need to extract the group and the action
+        // 0 - empty, 1 - xt, 2 - s, 3 - {group}#{action}, 4+ - {data}, last - empty
+        string[] args = message.Split('%')[3].Split('#');
+        string group = args[0];
+        string action = args[1];
+
+        // TODO: Switch on group, and let each group handle the action
+
+        switch (action)
+        {
+            case "getdigcooldown":
+                new DigCooldownHandler().HandleMessage(message, this);
+                return;
+
+            default:
+                Log.Error("Unhandled XT message with group {group} and action {action}: {message}", group, action, message);
+                return;
+        }
+
     }
 
     private void HandleXmlMessage(string message)
@@ -155,7 +178,7 @@ public class ClientHandler
         _stream.Flush();
     }
 
-    public void SendXT(XTGroup group, params string[] args)
+    public void SendXT(ServerToClientXTPackets group, params string[] args)
     {
         var groupId = group.ToIdString();
         var argString = string.Join("%", args);
@@ -180,7 +203,12 @@ public class ClientHandler
         string[] newArgs = new string[args.Length + 1];
         newArgs[0] = error.ToString();
         Array.Copy(args, 0, newArgs, 1, args.Length);
-        SendXT(XTGroup.Error, newArgs);
+        SendXT(ServerToClientXTPackets.Error, newArgs);
         Disconnect();
+    }
+
+    public void SetPenguin(Penguin penguin)
+    {
+        _penguin = penguin;
     }
 }

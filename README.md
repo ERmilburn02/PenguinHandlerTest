@@ -10,3 +10,5 @@ An experiment at creating a [CPPS](https://clubpenguin.fandom.com/wiki/CPPS) usi
   - Random Key
   - Login
 - XT Messages
+  - Pet
+    - Get Dig Cooldown

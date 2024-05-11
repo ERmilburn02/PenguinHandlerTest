@@ -13,20 +13,6 @@ class TCPServer
 {
     public static void Main()
     {
-        // Console.WriteLine(Crypto.Hash("penis"));
-
-        // DateTime now = DateTime.Now;
-
-        // DateTime in5Mins = now.AddMinutes(5);
-
-        // DateTime inAnHour = now.AddHours(1);
-
-        // List<DateTime> times = [inAnHour, now, in5Mins];
-
-        // times.Sort();
-
-        // return;
-
         using var log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Sixteen)
             .MinimumLevel.Verbose()
@@ -62,6 +48,7 @@ class TCPServer
 
                 // Start handling client communication in a new thread
                 Thread clientThread = new Thread(clientHandler.Handle);
+                clientThread.Name = $"Client {client.Client.RemoteEndPoint}";
                 clientThread.Start();
             }
         }

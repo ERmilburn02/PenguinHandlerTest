@@ -2,12 +2,13 @@ using System;
 
 public static class EnumExtensions
 {
-    public static string ToIdString(this XTGroup group)
+    public static string ToIdString(this ServerToClientXTPackets group)
     {
         return group switch
         {
-            XTGroup.Error => "e",
-            XTGroup.Login => "l",
+            ServerToClientXTPackets.Error => "e",
+            ServerToClientXTPackets.Login => "l",
+            ServerToClientXTPackets.DigCooldown => "getdigcooldown",
             _ => throw new Exception("Unknown group")
         };
     }

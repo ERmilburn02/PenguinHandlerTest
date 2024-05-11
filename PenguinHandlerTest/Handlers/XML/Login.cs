@@ -107,6 +107,8 @@ public class LoginHandler : IMessageHandler
         using var db = new PostgresContext();
         var player = db.Penguins.Where(p => p.Username == nickData.Username).FirstOrDefault() ?? throw new Exception($"Player {nickData.Username} not found in database! This should never happen! Check Login Server logs!");
 
+        client.SetPenguin(player);
+
         // Place the login key back in redis for other services (CJ Snow, etc...)
         redis.StringSet($"{player.Username}.loginkey", loginKey, TimeSpan.FromHours(12));
 
@@ -148,7 +150,7 @@ public class LoginHandler : IMessageHandler
 
         // TODO: Update local player info
 
-        client.SendXT(XTGroup.Login);
+        client.SendXT(ServerToClientXTPackets.Login);
 
         return;
     }
